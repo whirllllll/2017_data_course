@@ -1,0 +1,62 @@
+---
+title: "Untitled"
+author: "B04202016 物理二 朱文亞"
+date: "2017年4月13日"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+library(dplyr)
+library(plotly)
+
+raw_in_student<- read.csv("D:/github/2017_data_course/project/in_student.csv", sep= ",")
+
+#plotly table
+#College col
+typeId<- c(3: 11)
+yearId<- length(raw_in_student$year)
+all_type<- colnames(raw_in_student[,typeId])
+
+final_table<- data.frame() 
+for (i in c(1: yearId)){
+  year<- rep(raw_in_student$year[i], times= length(typeId))
+
+  plot_table<- data.frame(year= year, people= as.numeric(raw_in_student[i, typeId]), type= all_type)
+  final_table<- rbind(final_table, plot_table)
+}
+#plotly
+p<- plot_ly(final_table, x= ~year, y= ~people, color= ~type)%>%
+  add_lines()%>%
+  layout(title = "1993~2015",
+         xaxis = list(title = "year"),
+         yaxis = list(title = "people"))
+p
+
+htmlwidgets::saveWidget(p, "index.html")
+
+
+
+
+
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
