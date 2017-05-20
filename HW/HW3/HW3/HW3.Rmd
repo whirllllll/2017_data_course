@@ -1,0 +1,143 @@
+---
+title: "HW3"
+author: "B04202016 物理二 朱文亞"
+date: "2017年5月18日"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(Hmisc)
+
+```
+
+## **來台大交換學生人數與校外因素的關聯(2003~2013)**
+
+> 我們的期末專題想討論的是：來台大的交換學生人數，是否會與國際上各國的經濟、政治發展，或是與學校間簽訂的合約等因素相關。
+> 這次的作業想藉由比較來台大交換學生人數與台大出國交換學生人數、台大出國交換教師人數變化關係、出國訪問的教師人數、年份的關係，來測試來台大交換學生的人數，會與哪方面的因素相關。
+> 會用台大出國交換學生人數、台大出國交換教師人數、台大出國交換教師人數、年份來比較，是因為校內會吸引來台大交換學生的因素，通常不會與出國交換的學生或教師有關，不同的年份或許也會反映出當時國內外的環境，所以希望可以藉此來剔除掉部分校內的因素。
+
+> 這裡用來分析的資料，是把想討論的資料，分別拉出來，作為一筆有五個變數的資料。
+
+###資料整理
+
+```{r data_prepare}
+#read data
+out_student<- read.csv("data/out_ex_student.csv")
+in_student<- read.csv("data/in_ex_student.csv")
+
+col_name<- function(file, file_name){
+  url<- paste0("data/", file_name, ".csv")
+  x<- read.csv(url, header= F)
+  colnames(x)<- as.matrix(x[2, ])
+  x<- as.data.frame(x[c(-1, -2), ])
+}
+
+ex_teacher<- col_name(out_ex_teacher, "out_ex_teacher")
+interview_teacher<- col_name(interview_teacher, "interview_teacher")
+min_year<- max(min(in_student$Year), 2003, 2003)
+max_year<- as.numeric(min(max(in_student$Year), max(out_student$Year), max(as.matrix(ex_teacher$Year))))
+year_func<- function(x){x<- filter(x, Year>= min_year&Year<= max_year)}
+in_student<- year_func(in_student)
+out_student<- year_func(out_student)
+ex_teacher<- as.data.frame(ex_teacher)[11:21, ]
+interview_teacher<- as.data.frame(interview_teacher)[11:21, ]
+in_student<- as.data.frame(in_student)
+
+#write table
+data<- data.frame()
+data_final<- data.frame()
+
+for(i in c(1:11)){
+  
+  data_raw<- data.frame(year= in_student[, 1], in_student= in_student[, 2+i])%>% mutate(out_student= out_student[, 2+i])%>%
+    mutate(ex_teacher= ex_teacher[, 2+i])%>% mutate(interview= interview_teacher[, 2+i])
+  data<- rbind(data, data_raw)
+}
+
+
+data_final<- mutate(as.data.frame(as.integer(data$in_student)), as.numeric(data$out_student))%>%mutate(as.numeric(data$ex_teacher))%>%
+  mutate(as.numeric(data$interview))%>% mutate(as.factor(data$year))
+colnames(data_final)<- c("in_student", "out_student", "ex_teacher", "interview", "year")
+
+```
+
+
+#####*整理後的前六筆資料*
+> in_student：來台大交換學生人數
+> out_student：台大出國交換人數
+> ex_teacher：台大出國交換教師人數
+> interview：教師國際學人人數：(包括大陸及港澳地區)定義為訪問時間一周(含以上)者，且訪問目的為講學、講座、研究及進修等者。參訪期間低於1週者，或參訪內容僅為演講者，不得列入計算
+> year：年份
+
+
+```{r table}
+kable(head(data_final), row.names= FALSE, col.names = colnames(data_final), align= "c")
+```
+
+
+###**計算相關係數**
+####去除年份後的各變數與來台交換學生人數的相關係數
+
+
+```{r cor}
+cor_data<- cor(data_final[, -5])
+kable(cor_data, row.names= T, col.names = colnames(cor_data), align= "c")
+```
+
+
+###**ANOVA 檢定**
+
+```{r anova}
+ano_year<- anova(m_year<- lm(in_student~ year, data= data_final))
+kable(ano_year, row.names= T, col.names = colnames(ano_year), align= "c")
+```
+
+> 由相關係數與ANOVA檢定的分析可以看出，來台大的交換學生人數與出國交換學生人數以及年份較相關，與教師出國交換或訪問的人數較無關聯。
+> 在出國交換學生人數這部分，將來要討論的就是怎麼樣的因素會導致學生來台大或是從台大出去國外交換的人數為何會相關，比較相關的可能會是學校間簽訂的合約；年份則有可能是跟國際上的變化有關。
+
+> 因此以來台大交換學生人數、出國交換學生人數與年份來做雙變數分析。
+
+###**雙變數分析**
+
+####**同年份下的來台大交換學生人數平均數，加上信賴區間**
+
+```{r year_instudent}
+ggplot(data = data_final, 
+       aes(x = year, y = in_student)) +
+  stat_summary(fun.data = 'mean_cl_boot', size = 1) +
+  scale_y_continuous(breaks = seq(0, 320, by = 20)) +
+  geom_hline(yintercept = mean(data_final$in_student) , 
+             linetype = 'dotted') +
+  labs(x = '年份', y = '交換學生平均人數') +
+  coord_flip()
+```
+
+
+> 隨著年份增加，信賴區間變大
+
+
+####**不同年份下，來台大交換學生與台大出國交換學生關係**
+
+
+```{r diff_year}
+
+ggplot(data = data_final, 
+       aes(group = year, 
+           y = in_student, x = out_student)) +
+  geom_point() +
+  stat_smooth(method = 'lm', se = F) +
+  stat_smooth(aes(group = year, 
+                  y = in_student, x = out_student), 
+              method = 'lm', se = F) + 
+  facet_grid( . ~  year) +
+  labs(x = '出國交換學生人數', y = '來台大交換學生人數')
+```
+
+
+> 可以看出在不同年份中，來台大交換學生人數有明顯不同，且有漸漸增加
+> 每一年來台大交換學生與台大出國交換學生間都有明顯正相關
+

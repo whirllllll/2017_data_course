@@ -1,5 +1,6 @@
 library("dplyr")
 library("plotly")
+library("RColorBrewer")
 raw_data<- read.csv("D:/github/2017_data_course/project/eng_class.csv", sep= ",", header= TRUE)
 
 lastsemId = length(raw_data$semester)
@@ -29,9 +30,12 @@ newTable = newTable[with(newTable, order(pos)),]
 #newTable<- newTable[0:198, ]
 rownames(newTable) <- 1:nrow(newTable)
 
+colourCount = length(unique(mtcars$hp))
+getPalette = colorRampPalette(brewer.pal(9, "Set1"))
+
 p <- plot_ly(data = newTable, x = ~semester, 
-             y = ~class_num, color = ~pos) %>%
-  add_lines( yaxis = list(range = c(0,150)))
+             y = ~class_num, color = ~pos, colors= getPalette(colourCount)) %>%
+  add_lines( yaxis = list(range = c(0,10)))
 p
 htmlwidgets::saveWidget(p, "index.html")
 

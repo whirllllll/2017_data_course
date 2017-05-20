@@ -2,7 +2,7 @@ library(ggplot2)
 library(plotly)
 require(stats)
 
-rawdata = read.csv('data/teacher.csv',
+rawdata = read.csv('teacher.csv',
                    header = TRUE)
 delId = which(is.na(rawdata$Year) == TRUE)
 rawdata = rawdata[-delId,]
