@@ -7,12 +7,8 @@ library(RColorBrewer)
 library(wordcloud)
 filenames <- list.files(getwd(), pattern="*.txt")
 files <- lapply(filenames, readLines)
-#轉換資料結構-> 較容易搜尋
-#轉成為10篇文章
 docs <- Corpus(VectorSource(files))
-
 #移除可能有問題的符號
-#content_transformer->拿出每一個句子
 toSpace <- content_transformer(function(x, pattern) {
   return (gsub(pattern, " ", x))
 }
@@ -39,25 +35,13 @@ docs <- tm_map(docs, stripWhitespace)
 #library(SnowballC)
 #確保任何形式的單字只會轉換成相同詞性出現一次
 #docs <- tm_map(docs, stemDocument)
-
-#unlist->解開list結構
 mixseg = worker()
 jieba_tokenizer=function(d){
   unlist(segment(d[[1]],mixseg))
 }
-#切割詞
-#seg 型態：list
 seg = lapply(docs, jieba_tokenizer)
-
-#統計：table，型態=factor
 freqFrame = as.data.frame(table(unlist(seg)))
 
-#排序
-freqFrame<- freqFrame[order(freqFrame$Freq, decreasing = TRUE), ]
-head(freqFrame)
-
-#文字雲
-#出現頻率大於50，只選擇150個詞
 wordcloud(freqFrame$Var1,freqFrame$Freq,
           scale=c(5,0.1),min.freq=50,max.words=150,
           random.order=TRUE, random.color=FALSE, 

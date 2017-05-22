@@ -1,0 +1,147 @@
+---
+title: "HW5"
+author: "B04202016 物理二 朱文亞"
+date: "2017年5月22日"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list=ls(all.names = TRUE))
+library(dplyr)
+library(rvest)
+library(tmcn)
+library(tm)
+library(NLP)
+library(jiebaRD)
+library(jiebaR)
+library(RColorBrewer)
+library(wordcloud)
+library(knitr)
+```
+
+## **PTT Exchange wordcloud**
+
+> 這次的作業想了解的是交換學生所關心的事情，因此從ptt的交換學生板2010~2017的文章，來作詞頻分析，並做成文字雲。
+> 雖然台灣出國交換學生的想法並不能代表國外來台大交換學生，但先假定其中會有一部分的共通點，分析出來的結果也可以作為期末專題的參考。
+
+
+###**ptt Exchange板 爬蟲**
+
+
+> 因為爬蟲所需時間太長，因此將文本用以下程式碼爬蟲存檔後，直接用於下一段文本清理，不在Rmarkdown中執行爬蟲。
+
+```{r data_prepare, eval= F}
+id<- c(1:19)
+file_name<- paste0(id, ".txt")
+URL<- paste0("https://www.ptt.cc/bbs/Exchange/index", id, ".html")
+
+content_function<- function(x){
+  url<- paste0("https://www.ptt.cc", x)
+  html<- read_html(url)
+  tag<- html_node(html, "div#main-content.bbs-screen.bbs-content")
+  toUTF8(html_text(tag))
+}
+
+txt_function<- function(URL, file_name){
+  html<- read_html(URL)
+  title<- html_nodes(html, "a")
+  href<- html_attr(title, "href")
+  
+  data<- data.frame(title= toUTF8(html_text(title)), href= href)
+  data<- data[-c(1:10), ]
+  
+  all_text<- sapply(data$href, content_function)
+  write.table(all_text, file_name)
+  }
+
+mapply(txt_function, URL= URL, file_name= file_name)
+```
+
+###**清理文本**
+
+```{r clean}
+#取出檔案
+filenames<- list.files(getwd(), pattern= "*.txt")
+file<- lapply(filenames, readLines)
+docs<- Corpus(VectorSource(file))
+
+#清理檔案
+#移除有問題符號
+clean_symbol<- content_transformer(function(x, pattern){
+  return(gsub(pattern, " ",  x))
+})
+
+docs <- tm_map(docs, clean_symbol, "※")
+docs <- tm_map(docs, clean_symbol, "◆")
+docs <- tm_map(docs, clean_symbol, "‧")
+#移除冗詞
+docs <- tm_map(docs, clean_symbol, "的")
+docs <- tm_map(docs, clean_symbol, "我")
+docs <- tm_map(docs, clean_symbol, "是")
+docs <- tm_map(docs, clean_symbol, "看板")
+docs <- tm_map(docs, clean_symbol, "作者")
+docs <- tm_map(docs, clean_symbol, "發信站")
+docs <- tm_map(docs, clean_symbol, "批踢踢實業坊")
+docs <- tm_map(docs, clean_symbol, "[a-zA-Z]")
+docs <- tm_map(docs, clean_symbol, "推")
+docs <- tm_map(docs, clean_symbol, "有")
+docs <- tm_map(docs, clean_symbol, "了")
+docs <- tm_map(docs, clean_symbol, "在")
+docs <- tm_map(docs, clean_symbol, "也")
+docs <- tm_map(docs, clean_symbol, "可以")
+docs <- tm_map(docs, clean_symbol, "要")
+docs <- tm_map(docs, clean_symbol, "就")
+docs <- tm_map(docs, clean_symbol, "標題")
+docs <- tm_map(docs, clean_symbol, "不")
+docs <- tm_map(docs, clean_symbol, "都")
+docs <- tm_map(docs, clean_symbol, "但")
+docs <- tm_map(docs, clean_symbol, "沒")
+docs <- tm_map(docs, clean_symbol, "會")
+docs <- tm_map(docs, clean_symbol, "所以")
+docs <- tm_map(docs, clean_symbol, "嗎")
+docs <- tm_map(docs, clean_symbol, "想")
+docs <- tm_map(docs, clean_symbol, "說")
+docs <- tm_map(docs, clean_symbol, "或")
+docs <- tm_map(docs, clean_symbol, "很")
+docs <- tm_map(docs, clean_symbol, "只")
+docs <- tm_map(docs, clean_symbol, "和")
+docs <- tm_map(docs, clean_symbol, "還")
+docs <- tm_map(docs, clean_symbol, "因為")
+
+#移除標點符號 (punctuation)
+#移除數字 (digits)、空白 (white space)
+docs <- tm_map(docs, removePunctuation)
+docs <- tm_map(docs, removeNumbers)
+docs <- tm_map(docs, stripWhitespace)
+```
+
+###**建立文字雲**
+
+```{r wordcloud}
+
+#切詞器
+mixseg = worker()
+jieba_tokenizer=function(d){
+  unlist(segment(d[[1]],mixseg))
+}
+seg = lapply(docs, jieba_tokenizer)
+freqFrame = as.data.frame(table(unlist(seg)))
+
+#wordcloud
+wordcloud(freqFrame$Var1,freqFrame$Freq,
+          scale=c(5,0.1),min.freq=50,max.words=150,
+          random.order=TRUE, random.color=FALSE, 
+          rot.per=.1, colors=brewer.pal(8, "Dark2"),
+          ordered.colors=FALSE,use.r.layout=FALSE,
+          fixed.asp=TRUE)
+
+```
+
+
+> 分析出來的結果大概可看出最常出現的詞語有
+
+```{r large_freq}
+large_freq<- filter(freqFrame, Freq> 200)
+kable(large_freq, row.names= FALSE, col.names = colnames(large_freq), align= "c")
+```
+

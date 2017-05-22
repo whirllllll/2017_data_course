@@ -16,8 +16,8 @@ pttTestFunction <- function(URL, filename)
   }
   #getContent(data$href[1])
   allText = sapply(data$href, getContent)
-  #allText
+  allText
   #out <- file(filename, "w", encoding="BIG-5") 
-  write.table(allText, filename)
+  write.table(allText, filename) 
   #close(out) 
 }
